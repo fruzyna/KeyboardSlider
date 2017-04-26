@@ -13,10 +13,12 @@ public class Slider
 	Plugin[] plugins;
 	Plugin currentPlugin;
 	
-	Arduino arduino;
+	MyArduino arduino;
 	Thread sliderReader;
 	
 	private static Slider slider;
+	
+	static boolean debug = true;
 	
 	//Switches to the now current plugin
 	public void update()
@@ -38,7 +40,7 @@ public class Slider
 		{
 			currentPlugin = new Plugin("NONE", "system", "", "", "", "", "", "");
 		}
-		System.out.println("Current Plugin is now: " + currentPlugin.name + " at " + currentPlugin.getPos());
+		debug("Current Plugin is now: " + currentPlugin.name + " at " + currentPlugin.getPos());
 		
 		setSlider(currentPlugin.getPos());
 	}
@@ -56,18 +58,21 @@ public class Slider
 		public void run()
 		{
 			boolean running = true;
+			arduino.startReader();
 			while(running)
 			{
-				String input = arduino.serialRead(0);
-				System.out.println(input);
-				if(input.charAt(0) == '@')
+				String input = arduino.serialReadNext();
+				if(input.length() > 0)
 				{
-					try {
-						int position = Integer.parseInt(input.substring(1, input.indexOf('%')));
-						System.out.println("Moved to: " + position);
-						currentPlugin.setPos(position);
-					} catch(NumberFormatException e) {
-						System.out.println("Not a number!");
+					if(input.charAt(0) == '@')
+					{
+						try {
+							int position = Integer.parseInt(input.substring(1, input.indexOf('%')));
+							debug("Moved to: " + position);
+							currentPlugin.setPos(position);
+						} catch(NumberFormatException e) {
+							System.out.println("Not a number!");
+						}
 					}
 				}
 			}
@@ -83,20 +88,22 @@ public class Slider
 		// Get the logger for "org.jnativehook" and set the level to off.
 		Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
 		logger.setLevel(Level.OFF);
-		
-		arduino = new Arduino("/dev/ttyUSB0", 9600);
-		arduino.openConnection();
-		
-		KeyListener.getInstance();
+
 		IO.getInstance().readConfig();
 		plugins = IO.getInstance().getPlugins();
 		
 		currentPlugin = new Plugin("NONE", "system", "", "", "", "", "", "");
-		
-		update();
-		
-		sliderReader = new Thread(new Listener());
-		sliderReader.start();
+
+		arduino = new MyArduino("/dev/ttyUSB0", 9600);
+		if(arduino.openConnection())
+		{
+			KeyListener.getInstance();
+			
+			update();
+			
+			sliderReader = new Thread(new Listener());
+			sliderReader.start();
+		}
 	}
 	
 	public static void main(String[] args)
@@ -109,7 +116,16 @@ public class Slider
 		if(slider == null)
 		{
 			slider = new Slider();
+			new ManagementPanel();
 		}
 		return slider;
+	}
+	
+	public static void debug(String output)
+	{
+		if(debug)
+		{
+			System.out.println(output);
+		}
 	}
 }
