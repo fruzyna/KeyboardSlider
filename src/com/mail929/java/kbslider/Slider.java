@@ -1,12 +1,13 @@
 package com.mail929.java.kbslider;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 import org.jnativehook.GlobalScreen;
-
-import arduino.Arduino;
 
 public class Slider
 {
@@ -15,6 +16,8 @@ public class Slider
 	
 	MyArduino arduino;
 	Thread sliderReader;
+	Thread appListener;
+	Thread systemListener;
 	
 	private static Slider slider;
 	
@@ -26,19 +29,30 @@ public class Slider
 		String buttons = KeyListener.getInstance().pressed;
 		String application = "system";
 
+		try {
+			Process proc = Runtime.getRuntime().exec(new String[]{"bash", "-c", "xdotool getwindowfocus getwindowname"});
+			BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			application = br.readLine();
+			br.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		
 		boolean found = false;
 		for(Plugin p : plugins)
 		{
 			if(p.eligible(application, buttons))
 			{
 				currentPlugin = p;
+				currentPlugin.init();
 				found = true;
 				break;
 			}
 		}
 		if(!found)
 		{
-			currentPlugin = new Plugin("NONE", "system", "", "", "", "", "", "");
+			currentPlugin = new Plugin("NONE", "system", "", "", "", "", "", "", true);
 		}
 		debug("Current Plugin is now: " + currentPlugin.name + " at " + currentPlugin.getPos());
 		
@@ -48,6 +62,8 @@ public class Slider
 	//Sends a new position to the slider
 	public void setSlider(int pos)
 	{
+		System.out.println("Moving to " + pos);
+		currentPlugin.currPos = pos;
 		arduino.serialWrite(pos + "");
 	}
 	
@@ -64,6 +80,7 @@ public class Slider
 				String input = arduino.serialReadNext();
 				if(input.length() > 0)
 				{
+					System.out.println(input);
 					if(input.charAt(0) == '@')
 					{
 						try {
@@ -77,7 +94,64 @@ public class Slider
 				}
 			}
 		}
-		
+	}
+	
+	private class SystemListener implements Runnable
+	{
+		@Override
+		public void run()
+		{
+			boolean running = true;
+			int last = -1;
+			while(running)
+			{
+				int current = currentPlugin.getPos();
+				if(current != currentPlugin.currPos)
+				{
+					last = current;
+					if(last == current)
+					{
+						setSlider(current);
+					}
+				}
+				try
+				{
+					Thread.sleep(1000);
+				} catch (InterruptedException e)
+				{
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	
+	//Listener for updates from the slider
+	private class AppListener implements Runnable
+	{
+		@Override
+		public void run()
+		{
+			boolean running = true;
+			String currApp = "";
+			while(running)
+			{
+				try	{
+					Process proc = Runtime.getRuntime().exec(new String[]{"bash", "-c", "xdotool getwindowfocus getwindowname"});
+					BufferedReader br = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+					String app = "";
+					if(!(app = br.readLine()).equals(currApp))
+					{
+						System.out.println("New application: " + app);
+						currApp = app;
+						update();
+					}
+					br.close();
+				} catch (IOException e)	{
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 	
 	public Slider()
@@ -92,7 +166,7 @@ public class Slider
 		IO.getInstance().readConfig();
 		plugins = IO.getInstance().getPlugins();
 		
-		currentPlugin = new Plugin("NONE", "system", "", "", "", "", "", "");
+		currentPlugin = new Plugin("NONE", "system", "", "", "", "", "", "", true);
 
 		arduino = new MyArduino("/dev/ttyUSB0", 9600);
 		if(arduino.openConnection())
@@ -101,8 +175,14 @@ public class Slider
 			
 			update();
 			
+			appListener = new Thread(new AppListener());
+			appListener.start();
+			
 			sliderReader = new Thread(new Listener());
 			sliderReader.start();
+			
+			systemListener = new Thread(new SystemListener());
+			systemListener.start();
 		}
 	}
 	

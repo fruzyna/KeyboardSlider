@@ -45,18 +45,18 @@ public class KeyListener implements NativeKeyListener
 		if(e.getKeyCode() == NativeKeyEvent.VC_CONTROL)
 		{
 			pressed += "ctrl";
+			Slider.getInstance().update();
 		}
 		else if(e.getKeyCode() == NativeKeyEvent.VC_ALT)
 		{
 			pressed += "alt";
+			Slider.getInstance().update();
 		}
 		
 		if(pressed.charAt(0) == '+')
 		{
 			pressed = pressed.substring(1);
 		}
-		
-		Slider.getInstance().update();
 	}
 
 	@Override
@@ -65,19 +65,23 @@ public class KeyListener implements NativeKeyListener
 		if(e.getKeyCode() == NativeKeyEvent.VC_CONTROL)
 		{
 			pressed = remove(pressed, "ctrl");
+			Slider.getInstance().update();
 		}
 		else if(e.getKeyCode() == NativeKeyEvent.VC_ALT)
 		{
 			pressed = remove(pressed, "alt");
+			Slider.getInstance().update();
 		}
-		
-		Slider.getInstance().update();
 	}
 	
 	public String remove(String string, String seq)
 	{
-		string = string.replace("+" + seq, "");
+		if(string.charAt(0) == '+')
+		{
+			string = string.substring(1);
+		}
 		string = string.replace(seq + "+", "");
+		string = string.replace("+" + seq, "");
 		string = string.replace(seq, "");
 		return string;
 	}

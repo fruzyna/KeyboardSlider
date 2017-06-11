@@ -62,6 +62,7 @@ public class IO
 			BufferedReader br = new BufferedReader(new FileReader(file));
 			
 			String name = "", application = "", inType = "NONE", outType = "NONE", inData = "", outData = "", outFilter = "", buttons = "";
+			boolean reset = false;
 			
 			String line = "";
 			while((line = br.readLine()) != null)
@@ -99,12 +100,19 @@ public class IO
 				{
 					outFilter = parts[1];
 				}
+				else if(parts[0].equals("reset"))
+				{
+					if(parts[1].equals("true"))
+					{
+						reset = true;
+					}
+				}
 				else
 				{
 					outFilter += line;
 				}
 			}
-			return new Plugin(name, application, buttons, inType, inData, outType, outData, outFilter);
+			return new Plugin(name, application, buttons, inType, inData, outType, outData, outFilter, reset);
 		} catch (FileNotFoundException e){
 			e.printStackTrace();
 		} catch (IOException e) {

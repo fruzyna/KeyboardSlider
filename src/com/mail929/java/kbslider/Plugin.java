@@ -2,9 +2,12 @@ package com.mail929.java.kbslider;
 
 import java.awt.AWTException;
 import java.awt.Robot;
+import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+
+import javax.swing.KeyStroke;
 
 public class Plugin
 {
@@ -19,9 +22,11 @@ public class Plugin
 	String outData;
 	String outFilter;
 	
+	boolean reset;
+	
 	int currPos;
 	
-	public Plugin(String name, String application, String buttons, String inType, String inData, String outType, String outData, String outFilter)
+	public Plugin(String name, String application, String buttons, String inType, String inData, String outType, String outData, String outFilter, boolean reset)
 	{
 		this.name = name;
 		this.application = application;
@@ -31,8 +36,22 @@ public class Plugin
 		this.outType = outType;
 		this.outData = outData;
 		this.outFilter = outFilter;
+		this.reset= reset;
 		
 		currPos = 50;
+		currPos = getPos();
+	}
+	
+	public void init()
+	{
+		if(reset)
+		{
+			currPos = 50;
+		}
+		else
+		{
+			currPos = getPos();
+		}
 	}
 	
 	//gets position that slider should be at
@@ -41,7 +60,6 @@ public class Plugin
 		if(outType.equals("bash"))
 		{
 			try {
-				System.out.println(outFilter);
 				int length = 0;
 				if(outFilter.indexOf("[%]") > 0)
 				{
@@ -84,18 +102,79 @@ public class Plugin
 				e.printStackTrace();
 			}
 		}
+		else if(inType.equals("press"))
+		{
+			String parts[] = inData.split(",");
+			int net = pos - currPos;
+			if(parts[0].equals("left") && net < 0)
+			{
+				try
+				{
+					Robot r = new Robot();
+					for(int i = 0; i < -net; i++)
+					{
+						r.keyPress(getKeyCode(parts[1]));
+					}
+				} catch (AWTException e) {
+					e.printStackTrace();
+				}
+			}
+			else if(parts[2].equals("right") && net > 0)
+			{
+				try
+				{
+					Robot r = new Robot();
+					for(int i = 0; i < net; i++)
+					{
+						r.keyPress(getKeyCode(parts[3]));
+					}
+				} catch (AWTException e) {
+					e.printStackTrace();
+				}
+			}
+		}
 		currPos = pos;
 	}
+	
+	public int getKeyCode(String input)
+	{
+		if(input.equals("up"))
+		{
+			return KeyEvent.VK_UP;
+		}
+		else if(input.equals("down"))
+		{
+			return KeyEvent.VK_DOWN;
+		}
+		else if(input.equals("left"))
+		{
+			return KeyEvent.VK_LEFT;
+		}
+		else if(input.equals("right"))
+		{
+			return KeyEvent.VK_RIGHT;
+		}
+		else
+		{
+			KeyStroke ks = KeyStroke.getKeyStroke(input.charAt(0), 0);
+			return ks.getKeyCode();
+		}
+	}
+	
 	//determines if this could be the current plugin
 	public boolean eligible(String currApp, String pressed)
 	{
-		if(currApp.equals(application))
+		if(application.equals("system") || currApp.contains(application))
 		{
 			String[] buttonsArray = buttons.split("\\+");
 			String[] pressedArray = pressed.split("\\+");
 			if(buttonsArray.length != pressedArray.length)
 			{
 				return false;
+			}
+			if(buttons.equals("NONE") && pressed.equals(""))
+			{
+				return true;
 			}
 			for(String button : buttonsArray)
 			{

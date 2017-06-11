@@ -1,5 +1,5 @@
 package com.mail929.java.kbslider;
-import java.awt.Dimension;
+
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -11,26 +11,24 @@ import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 
 public class ManagementPanel extends JFrame
 {
 	PluginPanel plugin;
 	SettingsPanel settings;
-	String[] plugins;
+	String[] names;
 	
 	public ManagementPanel()
 	{
 		super("Keyboard Slider Management Panel");
 
-		plugins = new String[Slider.getInstance().plugins.length];
-		for(int i = 0; i < plugins.length; i++)
+		names = new String[Slider.getInstance().plugins.length];
+		for(int i = 0; i < names.length; i++)
 		{
-			plugins[i] = Slider.getInstance().plugins[i].name;
+			names[i] = Slider.getInstance().plugins[i].name;
 		}
 		
-		plugin = new PluginPanel(plugins);
+		plugin = new PluginPanel(names);
 		settings = new SettingsPanel();
 		
 		setLayout(new GridLayout(1,0));
@@ -38,7 +36,7 @@ public class ManagementPanel extends JFrame
 		add(settings);
 		add(plugin);
 		
-		setSize(500,500);
+		setSize(400,250);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setVisible(true);
 	}
@@ -55,7 +53,6 @@ public class ManagementPanel extends JFrame
 			list.setLayoutOrientation(JList.VERTICAL);
 			list.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
 			JScrollPane listScroller = new JScrollPane(list);
-			listScroller.setPreferredSize(new Dimension(250, 80));
 			add(listScroller);
 			
 			up = new JButton("Shift Up");
@@ -71,13 +68,25 @@ public class ManagementPanel extends JFrame
 		public void actionPerformed(ActionEvent e)
 		{
 			int selected = list.getSelectedIndex();
+			Plugin plugins[] = Slider.getInstance().plugins;
 			if(e.getSource().equals(up))
 			{
+				Plugin sp = plugins[selected];
+				plugins[selected] = plugins[selected - 1];
+				plugins[selected - 1] = sp;
 			}
 			else if(e.getSource().equals(down))
 			{
-				
+				Plugin sp = plugins[selected];
+				plugins[selected] = plugins[selected + 1];
+				plugins[selected + 1] = sp;
 			}
+			Slider.getInstance().plugins = plugins;
+			for(int i = 0; i < names.length; i++)
+			{
+				names[i] = plugins[i].name;
+			}
+			list.setListData(names);
 		}
 	}
 	
@@ -91,6 +100,7 @@ public class ManagementPanel extends JFrame
 		
 		public SettingsPanel()
 		{
+			setLayout(new GridLayout(5,0));
 			port = new JLabel("Slider Port: " + Slider.getInstance().arduino.getPortDescription());
 			add(port);
 
@@ -100,7 +110,7 @@ public class ManagementPanel extends JFrame
 			app = new JLabel("Plugin App: " + Slider.getInstance().currentPlugin.application);
 			add(app);
 			
-			type = new JLabel("Plugin Type: " + Slider.getInstance().currentPlugin.inType + ", " + Slider.getInstance().currentPlugin.outType);
+			type = new JLabel("Plugin Types: " + Slider.getInstance().currentPlugin.inType + ", " + Slider.getInstance().currentPlugin.outType);
 			add(type);
 			
 			state = new JLabel("Plugin Position: " + Slider.getInstance().currentPlugin.currPos);
