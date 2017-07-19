@@ -26,7 +26,7 @@ public class Slider
 	//Switches to the now current plugin
 	public void update()
 	{
-		String buttons = KeyListener.getInstance().pressed;
+		Buttons pressed = KeyListener.getInstance().pressed;
 		String application = "system";
 
 		try {
@@ -38,11 +38,12 @@ public class Slider
 			e.printStackTrace();
 		}
 		
+		Slider.debug("Combo: " + pressed.getPressed());
 		
 		boolean found = false;
 		for(Plugin p : plugins)
 		{
-			if(p.eligible(application, buttons))
+			if(p.eligible(application, pressed))
 			{
 				currentPlugin = p;
 				currentPlugin.init();

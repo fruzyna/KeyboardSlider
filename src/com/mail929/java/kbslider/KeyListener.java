@@ -9,10 +9,11 @@ public class KeyListener implements NativeKeyListener
 {
 	private static KeyListener kl;
 	
-	String pressed = "";
+	Buttons pressed;
 	
 	public KeyListener()
 	{
+		pressed = new Buttons();
         try {
             GlobalScreen.registerNativeHook();
         }
@@ -38,24 +39,15 @@ public class KeyListener implements NativeKeyListener
 	@Override
 	public void nativeKeyPressed(NativeKeyEvent e)
 	{
-		if(pressed != "")
-		{
-			pressed += "+";
-		}
 		if(e.getKeyCode() == NativeKeyEvent.VC_CONTROL)
 		{
-			pressed += "ctrl";
+			pressed.press("ctrl");
 			Slider.getInstance().update();
 		}
 		else if(e.getKeyCode() == NativeKeyEvent.VC_ALT)
 		{
-			pressed += "alt";
+			pressed.press("alt");
 			Slider.getInstance().update();
-		}
-		
-		if(pressed.charAt(0) == '+')
-		{
-			pressed = pressed.substring(1);
 		}
 	}
 
@@ -64,26 +56,14 @@ public class KeyListener implements NativeKeyListener
 	{
 		if(e.getKeyCode() == NativeKeyEvent.VC_CONTROL)
 		{
-			pressed = remove(pressed, "ctrl");
+			pressed.depress("ctrl");
 			Slider.getInstance().update();
 		}
 		else if(e.getKeyCode() == NativeKeyEvent.VC_ALT)
 		{
-			pressed = remove(pressed, "alt");
+			pressed.depress("alt");
 			Slider.getInstance().update();
 		}
-	}
-	
-	public String remove(String string, String seq)
-	{
-		if(string.charAt(0) == '+')
-		{
-			string = string.substring(1);
-		}
-		string = string.replace(seq + "+", "");
-		string = string.replace("+" + seq, "");
-		string = string.replace(seq, "");
-		return string;
 	}
 
 	@Override

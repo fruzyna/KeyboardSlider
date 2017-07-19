@@ -162,31 +162,18 @@ public class Plugin
 	}
 	
 	//determines if this could be the current plugin
-	public boolean eligible(String currApp, String pressed)
+	public boolean eligible(String currApp, Buttons pressed)
 	{
 		if(application.equals("system") || currApp.contains(application))
 		{
 			String[] buttonsArray = buttons.split("\\+");
-			String[] pressedArray = pressed.split("\\+");
-			if(buttonsArray.length != pressedArray.length)
+			if(buttonsArray.length != pressed.used)
 			{
 				return false;
 			}
-			if(buttons.equals("NONE") && pressed.equals(""))
-			{
-				return true;
-			}
 			for(String button : buttonsArray)
 			{
-				boolean found = false;
-				for(String press : pressedArray)
-				{
-					if(press.equals(button))
-					{
-						found = true;
-					}
-				}
-				if(!found)
+				if(!pressed.isPressed(button))
 				{
 					return false;
 				}
