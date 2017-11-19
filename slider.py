@@ -1,14 +1,15 @@
 from serial import Serial
-from subprocess import Popen, PIPE
 from os import listdir
 from threading import Thread
 from time import sleep
 from evdev import InputDevice
+from utils import runCmd, within
 
-def runCmd(bashCmd):
-    process = Popen(bashCmd.split(), stdout=PIPE)
-    output, error = process.communicate()
-    return output
+#plugins
+from plugin import Plugin
+from volume import Volume
+from firefoxscroll import FirefoxScroll
+from alttab import AltTab
 
 def getPos(arduino):
     read = arduino.readline()
@@ -21,72 +22,26 @@ def getPos(arduino):
 def moveTo(arduino, pos):
     arduino.write(str(pos))
 
-def within(value, bounds, of):
-    return value >= of - bounds and value <= of + bounds
-
-#setup plugin system
-class Plugin:
-    name = 'generic plugin'
-    program = 'none'
-    def onMove(self, position):
-        pass
-    def update(self):
-        return pos
-    def canBeActive(self, program, keys):
-        return True
-
-class Volume(Plugin):
-    name = 'volume control'
-    program = 'system'
-    def onMove(self, position):
-        runCmd('amixer -D pulse sset Master ' + str(position) + '%')
-    def update(self):
-        output = runCmd('amixer get Master')
-        start = output.index('[') + 1
-        end = output.index('%', start)
-        return int(output[start:end])
-    def canBeActive(self, program, keys):
-        return len(keys) == 1 and keys[0].endswith('CTRL')
-
-class FirefoxScroll(Plugin):
-    name = 'scroller'
-    program = 'Mozilla Firefox'
-    def onMove(self, position):
-        global pos
-        scrolls = pos - position
-        if scrolls != 0:
-            keys = ''
-            for i in range(abs(scrolls)):
-                if scrolls > 0:
-                    keys += 'Up '
-                else:
-                    keys += 'Down '
-            runCmd('xdotool key ' + keys)
-    def update(self):
-        return 50
-    def canBeActive(self, program, keys):
-        return program.endswith(self.program)
-
-plugins = [Plugin(), Volume(), FirefoxScroll()]
+plugins = [Plugin(), Volume(), FirefoxScroll(), AltTab()]
 
 #setup arduino communication
 arduino = Serial('/dev/ttyUSB0', 9600)
 
 #start program
 plgn = None
-pos = -1
+pos = 50
 running = True
 program = ''
 keys = []
 
+#threads
 class UpdateThread(Thread):
     def run(self):
-        global plgn
         global pos
-        global running
-        toSend = plgn.update()
+        toSend = 50
+        newPos = 50
         while running:
-            newPos = plgn.update()
+            newPos = plgn.update(pos)
             if newPos == toSend:
                 #print('Moving to: ' + str(newPos))
                 moveTo(arduino, newPos)
@@ -94,27 +49,24 @@ class UpdateThread(Thread):
                 toSend = -1
             if not within(newPos, 2, pos):
                 toSend = newPos
-            sleep(0.5)
+            sleep(0.25)
         print('Updater thread complete.')
 
 class ReadThread(Thread):
     def run(self):
-        global plgn
         global pos
-        global running
         sleep(1)
         while running:
             newPos = getPos(arduino)
-            if newPos != pos:
+            if not within(newPos, 1, pos):
                 #print('Moved to: ' + str(newPos))
-                plgn.onMove(newPos)
+                plgn.onMove(newPos, pos)
                 pos = newPos
         print('Reader thread complete.')
 
 class ProgramThread(Thread):
     def run(self):
         global program
-        global plugins
         global plgn
         global keys
         device = InputDevice('/dev/input/event5')
@@ -149,3 +101,9 @@ while running:
         print('Position: ' + str(pos) + "%")
     elif raw == 'plugin':
         print('Current Plugin: ' + plgn.name)
+    elif raw == 'status':
+        print('Status will be displayed in 3 seconds...')
+        sleep(3)
+        print('Current Plugin: ' + plgn.name)
+        print('Open Program: ' + program)
+        print('Keyboard Keys: ' + ''.join(map(str, keys)))
